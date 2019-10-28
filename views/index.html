@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Rent A Bike</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <style>
+      #map {
+        height: 100%;
+        position: unset !important;
+      }
+      #input-card {
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        width: 20%;
+        z-index: 999 !important;
+        margin: 10px 0 0 10px;
+      }
+      #label {
+        padding: 10px;
+        color: #fff;
+        background-color: #4d90fe;
+        font-size: 25px;
+        font-weight: 700;
+        font-family: sans-serif;
+      }
+      #address {
+        width: 95%;
+        border: solid 3px black;
+        padding: 5px;
+        font-size: 15px;
+      }
+      #infowindow-content {
+        font-weight: bold;
+      }
+
+      #infowindow-content {
+        display: none;
+      }
+
+      #map #infowindow-content {
+        display: inline;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="input-card">
+      <div id="label">What is your location?</div>
+      <div><input id="address" type="text" placeholder="Enter your location" /></div>
+    </div>
+    <div id="map"></div>
+    <div id="infowindow-content"></div>
+    <script>
+      var bikeStations = [];
+
+      $('#address').on("change",function(){
+        $.getJSON("/find-bike-stations", function(data) {
+          data.features.forEach(function(bikeStation, index) {
+            var bikeStationInfo = [];
+            bikeStationInfo.push(bikeStation.geometry.coordinates[0]);
+            bikeStationInfo.push(bikeStation.geometry.coordinates[1]);
+            bikeStationInfo.push(bikeStation.properties.addressStreet);
+            bikeStationInfo.push(bikeStation.properties.bikesAvailable);
+            bikeStationInfo.push(bikeStation.properties.docksAvailable);
+            bikeStations.push(bikeStationInfo);
+          });
+        });
+      });
+
+      function initMap() {
+        var map = new google.maps.Map(document.getElementById('map'), {
+          center: {lat: 39.952583, lng: -75.165222},
+          zoom: 15
+        });
+        var card = document.getElementById('input-card');
+        var input = document.getElementById('address');
+        var types = document.getElementById('type-selector');
+        var strictBounds = document.getElementById('strict-bounds-selector');
+
+        map.controls[google.maps.ControlPosition.TOP_RIGHT].push(card);
+
+        var autocomplete = new google.maps.places.Autocomplete(input);
+
+        autocomplete.bindTo('bounds', map);
+
+        autocomplete.setFields(['address_components', 'geometry', 'icon', 'name']);
+
+        var infowindow = new google.maps.InfoWindow();
+        var infowindowContent = document.getElementById('infowindow-content');
+        infowindow.setContent(infowindowContent);
+        var marker = new google.maps.Marker({
+          map: map,
+          icon: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png',
+          anchorPoint: new google.maps.Point(0, -29)
+        });
+
+        autocomplete.addListener('place_changed', function() {
+          infowindow.close();
+          marker.setVisible(false);
+          var place = autocomplete.getPlace();
+          if (!place.geometry) {
+            window.alert("No details available for input: '" + place.name + "'");
+            return;
+          }
+
+          if (place.geometry.viewport) {
+            map.fitBounds(place.geometry.viewport);
+            map.setZoom(18);
+          } else {
+            map.setCenter(place.geometry.location);
+            map.setZoom(18);
+          }
+          marker.setPosition(place.geometry.location);
+          marker.setVisible(true);
+
+          for (i = 0; i < bikeStations.length; i++) {
+            marker = new google.maps.Marker({
+              position: new google.maps.LatLng(bikeStations[i][1], bikeStations[i][0]),
+              label: 'B',
+              map: map
+            });
+
+            google.maps.event.addListener(marker, 'click', (function(marker, i) {
+              var content = '<span id="marker-address">' + bikeStations[i][2] + '</span><br /><span id="bikes-available"><strong>Available bike count: </strong>' + bikeStations[i][3] + '</span><br /><span id="docks-available"><strong>Available dock count: </strong>' + bikeStations[i][4] + '</span>';
+              return function() {
+                infowindow.setContent(content);
+                infowindow.open(map, marker);
+              }
+            })(marker, i));
+          }
+        });
+      }
+
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD-dfn5kHxlkqRk2KEww59n-fbsWO6r5b4&libraries=places&callback=initMap"
+        async defer></script>
+    <script src="https://www.promisejs.org/polyfills/promise-6.1.0.js"></script>
+  </body>
+</html>

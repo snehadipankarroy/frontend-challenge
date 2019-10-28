@@ -15,5 +15,10 @@
   "bugs": {
     "url": "https://github.com/punkave/frontend-challenge/issues"
   },
-  "homepage": "https://github.com/punkave/frontend-challenge#readme"
+  "homepage": "https://github.com/punkave/frontend-challenge#readme",
+  "dependencies": {
+    "bluebird": "^3.7.1",
+    "express": "^4.17.1",
+    "request": "^2.88.0"
+  }
 }
